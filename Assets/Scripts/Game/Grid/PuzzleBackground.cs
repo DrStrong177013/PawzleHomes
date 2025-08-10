@@ -1,170 +1,137 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class PuzzleBackground : MonoBehaviour
 {
-    [SerializeField] private GameOver gameOver;
-    [SerializeField] private Transform gridImage;
-    [SerializeField] private Transform ring1;
-    // [SerializeField] private Transform ring2;
-    [SerializeField] private Component[] components;
-    private GameObject[] bgList;
-    private bool[] levelCleareds;
+    [SerializeField] GameOver gameOver;
+    [SerializeField] Transform gridImage;
+    [SerializeField] Transform ring1;
+    [SerializeField] Component[] components;
 
-    private void OnEnable()
+    Image gridImg, ringImg;
+    GameObject[] bgList;
+    Image[] bgImgs;
+    bool[] levelCleareds;
+
+    void OnEnable() { GameEvents.LevelCleared += Run; GameEvents.GridAppears += RunGridAppears; }
+    void OnDisable() { GameEvents.LevelCleared -= Run; GameEvents.GridAppears -= RunGridAppears; }
+
+    IEnumerator Start()
     {
-        GameEvents.LevelCleared += Run;
-        GameEvents.GridAppears += RunGridAppears;
+        // Chờ dữ liệu
+        yield return new WaitUntil(() => GameData.stageLevelDict != null);
+        Init();
+        InitDefaultAlpha(0.07f); // cleared = 1, else = 0.07
     }
-    private void OnDisable()
+
+    void Init()
     {
-        GameEvents.LevelCleared -= Run;
-        GameEvents.GridAppears -= RunGridAppears;
-    }
+        int stage = Mathf.Max(1, GameData.currentStage);
+        levelCleareds = GetBoolClearedLevels(stage);
 
-    void Awake()
-    {
-        levelCleareds = GetBoolClearedLevels(GameData.currentStage);
+        var comp = components[Mathf.Clamp(stage - 1, 0, components.Length - 1)];
+        var imgs = comp.GetComponentsInChildren<Image>(true)
+            .Where(i => i.transform.parent == comp.transform)
+            .OrderBy(i => i.transform.GetSiblingIndex())
+            .Select(i => i.gameObject)
+            .ToList();
 
-        Component component = components[Mathf.Max(0, GameData.currentStage - 1)];
-        bgList = component.GetComponentsInChildren<Transform>(true).Where(t => t != component.transform).Select(t => t.gameObject).ToArray();
+        bgList = imgs.Take(GameData.stageLevelDict[stage]).ToArray();
+        bgImgs = bgList.Select(go => go.GetComponent<Image>()).ToArray();
 
-        bgList = bgList[0..GameData.stageLevelDict[GameData.currentStage]];
+        // Off các component khác
         for (int i = 0; i < components.Length; i++)
-        {
-            if (i != GameData.currentStage - 1)
-            {
-                components[i].gameObject.SetActive(false);
-            }
-        }
+            components[i].gameObject.SetActive(i == stage - 1);
 
-        Color colored = gridImage.GetComponent<Image>().color;
-        colored.a = 0f;
-        gridImage.GetComponent<Image>().color = colored;
-        for (int i = 0; i < levelCleareds.Length; i++)
-        {
-            var image = bgList[i].GetComponent<Image>();
-            if (image != null)
-            {
-                image.color = colored;
-            }
-            else
-            {
-                Debug.LogWarning($"No Image component on: {bgList[i].name}");
-            }
-        }
+        gridImg = gridImage ? gridImage.GetComponent<Image>() : null;
+        ringImg = ring1 ? ring1.GetComponent<Image>() : null;
+        if (!gridImg || !ringImg) Debug.LogError("Missing Image on grid/ring");
 
-        // SaveSystem.ConvertImageColor(ring1.GetComponent<Image>(), GameData.shapeColor);
-        Color ringColor = gridImage.GetComponent<Image>().color;
-        ringColor.a = 0.8f;
-        ring1.GetComponent<Image>().color = ringColor;
+        // grid visible ban đầu
+        if (gridImg) { var c = gridImg.color; c.a = 1; gridImg.color = c; }
+        // ring màu
+        if (ringImg && gridImg) { var rc = gridImg.color; rc.a = 0.8f; ringImg.color = rc; }
     }
 
-    void Start()
+    void InitDefaultAlpha(float unclearedAlpha)
     {
-        SetImagesAlpha(0.07f);
-    }
-
-    private void SetImagesAlpha(float alpha)
-    {
-        Color coloring = bgList[0].GetComponent<Image>().color;
-        coloring.a = alpha;
-        for (int i = 0; i < levelCleareds.Length; i++)
+        int n = Mathf.Min(levelCleareds.Length, bgList.Length);
+        for (int i = 0; i < n; i++)
         {
-            if (levelCleareds[i])
-            {
-                bgList[i].GetComponent<Image>().color = coloring;
-                Debug.Log($" i {i}");
-            }
+            var img = bgImgs[i];
+            if (!img) continue;
+            var c = img.color;
+            c.a = levelCleareds[i] ? 1f : unclearedAlpha;
+            img.color = c;
         }
     }
 
-    private void Run(int stars)
+    void Run(int stars) { StartCoroutine(Execute(stars)); }
+    IEnumerator Execute(int stars)
     {
-        StartCoroutine(Execute(stars));
-    }
-
-    private IEnumerator Execute(int stars)
-    {
-        ring1.localScale = Vector2.zero;
-        StartCoroutine(Disappear(ring1.GetComponent<Image>(), 0.5f, 0f, 1));
-        yield return StartCoroutine(Resize(ring1, Vector2.one * 2, 0.3f));
+        ring1.localScale = Vector3.zero;
+        if (ringImg) StartCoroutine(Disappear(ringImg, 0.5f, 0f, 1f));
+        yield return Resize(ring1, Vector3.one * 2f, 0.3f);
         yield return new WaitForSeconds(0.05f);
-        yield return StartCoroutine(Resize(ring1, Vector2.one / 5, 0.2f));
-        StartCoroutine(Resize(ring1, Vector2.one * 50, 1.2f));
+        yield return Resize(ring1, Vector3.one / 5f, 0.2f);
+        StartCoroutine(Resize(ring1, Vector3.one * 50f, 1.2f));
         yield return new WaitForSeconds(0.3f);
-        ring1.GetComponentInChildren<ParticleSystem>().Play();
+        var ps = ring1.GetComponentInChildren<ParticleSystem>();
+        if (ps) ps.Play();
         yield return new WaitForSeconds(0.8f);
-        SetImagesAlpha(1f);
-        yield return StartCoroutine(Disappear(gridImage.GetComponent<Image>(), 0.5f, 1f, 0));
+        InitDefaultAlpha(1f);
+        if (gridImg) yield return Disappear(gridImg, 0.5f, 1f, 0f);
 
-        yield return StartCoroutine(Disappear(bgList[GameData.currentLevel - 1].GetComponent<Image>(), 1f, 0f, 1f));
+        int idx = Mathf.Clamp(GameData.currentLevel - 1, 0, bgImgs.Length - 1);
+        if (bgImgs[idx]) yield return Disappear(bgImgs[idx], 1f, 0f, 1f);
         yield return new WaitForSeconds(1.1f);
-        gameOver.GameOverPopup(stars);
+        gameOver?.GameOverPopup(stars);
     }
 
-    private void RunGridAppears()
+    void RunGridAppears() { StartCoroutine(GridAppears()); }
+    IEnumerator GridAppears()
     {
-        StartCoroutine(GridAppears());
+        yield return Resize(gridImage, Vector3.one * 1.1f, 0f);
+        StartCoroutine(Resize(gridImage, Vector3.one, 0.2f));
+        if (gridImg) yield return Disappear(gridImg, 0.5f, 0f, 1f);
     }
 
-    private IEnumerator GridAppears()
+    IEnumerator Resize(Transform tr, Vector3 to, float dur)
     {
-        yield return StartCoroutine(Resize(gridImage, Vector2.one * 1.1f, 0f));
-        StartCoroutine(Resize(gridImage, Vector2.one, 0.2f));
-        yield return StartCoroutine(Disappear(gridImage.GetComponent<Image>(), 0.5f, 0f, 1));
-    }
-
-
-    private IEnumerator Resize(Transform _transform, Vector2 expectedScale, float moveDuration)
-    {
-        Vector2 currentScale = _transform.localScale;
-        float elapsedTime = 0;
-        while (elapsedTime < moveDuration)
+        var from = tr.localScale;
+        float t = 0f;
+        while (t < dur)
         {
-            float t = Mathf.Lerp(0f, 1f, elapsedTime / moveDuration);
-            _transform.localScale = Vector2.Lerp(currentScale, expectedScale, t);
-            elapsedTime += Time.deltaTime;
-            if (elapsedTime >= moveDuration) break;
+            float k = dur <= 0f ? 1f : t / dur;
+            tr.localScale = Vector3.Lerp(from, to, k);
+            t += Time.deltaTime;
             yield return null;
         }
-        _transform.localScale = expectedScale;
+        tr.localScale = to;
     }
 
-    private IEnumerator Disappear(Image _image, float moveDuration, float currentAlpha, float expectedAlpha)
+    IEnumerator Disappear(Image img, float dur, float fromA, float toA)
     {
-        Color colored = _image.color;
-        float elapsedTime = 0;
-        while (elapsedTime < moveDuration)
+        if (!img) yield break;
+        var c = img.color; float t = 0f;
+        while (t < dur)
         {
-            float alpha = Mathf.Lerp(currentAlpha, expectedAlpha, elapsedTime / moveDuration);
-            colored.a = alpha;
-            _image.color = colored;
-            elapsedTime += Time.deltaTime;
-            if (elapsedTime >= moveDuration) break;
+            c.a = Mathf.Lerp(fromA, toA, dur <= 0f ? 1f : t / dur);
+            img.color = c; t += Time.deltaTime;
             yield return null;
         }
-        Debug.Log("runnig");
-        colored.a = expectedAlpha;
-        _image.color = colored;
+        c.a = toA; img.color = c;
     }
-    
+
     bool[] GetBoolClearedLevels(int stageID)
     {
         if (GameData.stageLevelDict == null) GameEvents.LoadPlayer();
-        bool[] levelCleared = new bool[GameData.stageLevelDict[stageID]]; 
-        for (int i = 1; i <= GameData.stageLevelDict[stageID]; i++)
-        {
-            if (GameData.playerLevelData[(stageID, i)] > 0)
-            {
-                levelCleared[i-1] = true;
-            }
-            
-        }
+        int count = GameData.stageLevelDict.TryGetValue(stageID, out var n) ? n : 0;
+        var levelCleared = new bool[count];
+        for (int i = 1; i <= count; i++)
+            levelCleared[i - 1] = GameData.playerLevelData.TryGetValue((stageID, i), out var v) && v > 0;
         return levelCleared;
     }
-
-
 }

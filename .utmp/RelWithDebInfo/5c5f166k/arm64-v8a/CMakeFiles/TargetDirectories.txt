@@ -1,0 +1,8 @@
+D:/OnDev_2025To2026/Dev/Unity/Code/PawzleHomes/.utmp/RelWithDebInfo/5c5f166k/arm64-v8a/CMakeFiles/edit_cache.dir
+D:/OnDev_2025To2026/Dev/Unity/Code/PawzleHomes/.utmp/RelWithDebInfo/5c5f166k/arm64-v8a/CMakeFiles/rebuild_cache.dir
+D:/OnDev_2025To2026/Dev/Unity/Code/PawzleHomes/.utmp/RelWithDebInfo/5c5f166k/arm64-v8a/GameActivity/CMakeFiles/game.dir
+D:/OnDev_2025To2026/Dev/Unity/Code/PawzleHomes/.utmp/RelWithDebInfo/5c5f166k/arm64-v8a/GameActivity/CMakeFiles/edit_cache.dir
+D:/OnDev_2025To2026/Dev/Unity/Code/PawzleHomes/.utmp/RelWithDebInfo/5c5f166k/arm64-v8a/GameActivity/CMakeFiles/rebuild_cache.dir
+D:/OnDev_2025To2026/Dev/Unity/Code/PawzleHomes/.utmp/RelWithDebInfo/5c5f166k/arm64-v8a/FramePacing/CMakeFiles/swappywrapper.dir
+D:/OnDev_2025To2026/Dev/Unity/Code/PawzleHomes/.utmp/RelWithDebInfo/5c5f166k/arm64-v8a/FramePacing/CMakeFiles/edit_cache.dir
+D:/OnDev_2025To2026/Dev/Unity/Code/PawzleHomes/.utmp/RelWithDebInfo/5c5f166k/arm64-v8a/FramePacing/CMakeFiles/rebuild_cache.dir
