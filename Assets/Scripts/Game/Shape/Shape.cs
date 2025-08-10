@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -67,7 +67,7 @@ public class Shape : MonoBehaviour, IPointerEnterHandler, IPointerClickHandler, 
         MakeShapeVisible();
         GameData.onBoardShapes[shapeIndex] = false;
     }
-    
+
     public void RequestNewShape(ShapeData shapeData)
     {
         _currentShapeData = shapeData;
@@ -154,7 +154,8 @@ public class Shape : MonoBehaviour, IPointerEnterHandler, IPointerClickHandler, 
             if (shapeData.rows % 2 != 0)
             {
                 startYPos = (shapeData.rows / 2) * moveDistance.y;
-            } else
+            }
+            else
             {
                 startYPos = ((shapeData.rows / 2) - 1) * moveDistance.y + moveDistance.y / 2;
             }
@@ -235,7 +236,7 @@ public class Shape : MonoBehaviour, IPointerEnterHandler, IPointerClickHandler, 
             eventData.position, Camera.main, out Vector3 pos);
         _transform.position = pos;
     }
-    
+
     public void OnEndDrag(PointerEventData eventData)
     {
         if (SceneManager.GetActiveScene().name != "Puzzle") hint.GiveHintEnd(shapeIndex);
