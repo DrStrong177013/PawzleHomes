@@ -3,20 +3,19 @@ using UnityEngine;
 
 public class MenuTransition : MonoBehaviour
 {
+    // Cờ cho toàn phiên chơi (static sống xuyên scene trong runtime)
+    private static bool s_AlreadyPlayed = false;
+
     [Header("Portal")]
-    [Tooltip("Full-screen mask for portal effect using custom shader")]
     public RectTransform portalMask;
 
     [Header("Cat Fly-In")]
-    [Tooltip("RectTransform of the cat sprite, starts off-screen")]
     public RectTransform catSprite;
 
     [Header("Neon Frame")]
-    [Tooltip("CanvasGroup for the neon Pawzle Home frame")]
     public CanvasGroup neonFrame;
 
     [Header("Menu Group")]
-    [Tooltip("CanvasGroup containing Play/Supply/Pawzie buttons")]
     public CanvasGroup menuGroup;
 
     [Header("Timings")]
@@ -25,10 +24,21 @@ public class MenuTransition : MonoBehaviour
     public float neonTime = 0.5f;
     public float menuFadeTime = 0.3f;
 
+    private void Awake()
+    {
+        // Nếu đã chạy rồi trong phiên này → bỏ qua hiệu ứng, set trạng thái cuối và tắt script
+        if (s_AlreadyPlayed)
+        {
+            ApplyFinalState();
+            enabled = false; // chặn Start/Coroutines của component này
+        }
+    }
+
     private void Start()
     {
-        // Initialize states
-        gameObject.SetActive(true);
+        if (!enabled) return; // đã bị skip trong Awake
+
+        // Trạng thái ban đầu
         portalMask.gameObject.SetActive(false);
 
         catSprite.anchoredPosition = new Vector2(-Screen.width, 0);
@@ -41,54 +51,89 @@ public class MenuTransition : MonoBehaviour
         menuGroup.blocksRaycasts = false;
         menuGroup.gameObject.SetActive(false);
 
-        // Begin transition sequence
+        s_AlreadyPlayed = true; // đánh dấu đã phát intro
         StartCoroutine(DoTransition());
     }
 
     private IEnumerator DoTransition()
     {
         yield return null;
-        // 1) Portal expand via custom shader Cutoff
-        portalMask.gameObject.SetActive(true);
+
+        // 1) Portal mask shader cutoff
         var portalImage = portalMask.GetComponent<UnityEngine.UI.Image>();
-        Material mat = portalImage.material;
+        var mat = portalImage.material;
         mat.SetFloat("_Cutoff", 0f);
         LeanTween.value(gameObject, 0f, 1f, portalTime)
-                .setEase(LeanTweenType.easeOutQuad)
-                .setOnUpdate(v => mat.SetFloat("_Cutoff", v));
+            .setEase(LeanTweenType.easeOutQuad)
+            .setOnUpdate(v => mat.SetFloat("_Cutoff", v));
         yield return new WaitForSeconds(portalTime);
 
+        // 1b) Fill vòng tròn
         portalMask.gameObject.SetActive(true);
-        // khởi tạo fill = 0
-        var img = portalMask.GetComponent<UnityEngine.UI.Image>();
-        img.fillAmount = 0f;
-        // tweener tăng dần fillAmount
+        portalImage.fillAmount = 0f;
         LeanTween.value(portalMask.gameObject, 0f, 1f, portalTime)
-                 .setEase(LeanTweenType.easeOutQuad)
-                 .setOnUpdate((float v) => { img.fillAmount = v; });
+            .setEase(LeanTweenType.easeOutQuad)
+            .setOnUpdate((float v) => { portalImage.fillAmount = v; });
         yield return new WaitForSeconds(portalTime);
 
-        // 2) Cat fly-in to center
+        // 2) Cat bay vào giữa
         catSprite.gameObject.SetActive(true);
         LeanTween.moveLocal(catSprite.gameObject, Vector3.zero, catTime)
-                 .setEase(LeanTweenType.easeOutBack);
+            .setEase(LeanTweenType.easeOutBack);
         yield return new WaitForSeconds(catTime);
 
         // 3) Neon frame fade-in
         LeanTween.alphaCanvas(neonFrame, 1f, neonTime)
-                 .setEase(LeanTweenType.easeInOutQuad);
+            .setEase(LeanTweenType.easeInOutQuad);
         yield return new WaitForSeconds(neonTime);
 
-        // 4) Menu buttons fade and enable interaction
+        // 4) Menu hiện và bật tương tác
         menuGroup.gameObject.SetActive(true);
         LeanTween.alphaCanvas(menuGroup, 1f, menuFadeTime)
-                 .setOnComplete(() =>
-                 {
-                     menuGroup.interactable = true;
-                     menuGroup.blocksRaycasts = true;
-                 });
+            .setOnComplete(() =>
+            {
+                menuGroup.interactable = true;
+                menuGroup.blocksRaycasts = true;
+            });
 
         yield return new WaitForSeconds(2f);
+        gameObject.SetActive(false);
+    }
+
+    public void DoTransitionNow()
+    {
+        // Nếu đã phát rồi thì không play lại
+        if (s_AlreadyPlayed)
+        {
+            ApplyFinalState();
+            return;
+        }
+        s_AlreadyPlayed = true;
+        StartCoroutine(DoTransition());
+    }
+
+    private void ApplyFinalState()
+    {
+        // Trạng thái “sau khi animation xong”
+        if (portalMask) portalMask.gameObject.SetActive(false);
+
+        if (catSprite)
+        {
+            catSprite.gameObject.SetActive(true);
+            catSprite.anchoredPosition = Vector2.zero;
+        }
+
+        if (neonFrame) neonFrame.alpha = 1f;
+
+        if (menuGroup)
+        {
+            menuGroup.gameObject.SetActive(true);
+            menuGroup.alpha = 1f;
+            menuGroup.interactable = true;
+            menuGroup.blocksRaycasts = true;
+        }
+
+        // Ẩn object controller nếu bạn muốn
         gameObject.SetActive(false);
     }
 }

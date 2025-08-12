@@ -72,6 +72,7 @@
     <Compile Include="Assets\Scripts\StageOpen.cs" />
     <Compile Include="Assets\Scripts\Game\Shape\ShapeTile.cs" />
     <Compile Include="Assets\LeanTween\Examples\Scripts\GeneralBasics2d.cs" />
+    <Compile Include="Assets\Scripts\PS_SpriteRandomizer.cs" />
     <Compile Include="Assets\LeanTween\Examples\Scripts\TestingZLegacy.cs" />
     <Compile Include="Assets\Scripts\Game\Grid\PuzzleBackground.cs" />
     <Compile Include="Assets\Scripts\Save\SaveSystemNew.cs" />
